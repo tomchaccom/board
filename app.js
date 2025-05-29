@@ -6,6 +6,9 @@ var logger = require('morgan');
 const session = require('express-session');
 const boardRouter = require('./routes/board');
 
+const productRouter = require('./routes/product'); // 새로 추가
+const cartRouter = require('./routes/cart');
+
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const userRouter = require('./routes/user');
@@ -34,7 +37,8 @@ app.use('/board', boardRouter);
 app.get('/login', (req,res)=> {
   res.redirect('/user/login');
 });
-
+app.use('/product', productRouter); // 제품 라우터 연결
+app.use('/cart', cartRouter);       // 장바구니 라우터 연결
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
