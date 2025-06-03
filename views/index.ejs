@@ -63,7 +63,17 @@
         <li class="nav-item"><a href="/product" class="nav-link">상품목록</a></li>
         <li class="nav-item"><a href="/cart" class="nav-link">장바구니</a></li>
         <li class="nav-item"><a href="/board" class="nav-link">고객센터</a></li>
-        <li class="nav-item"><a href="/user/login" class="nav-link">로그인</a></li>
+        <li class="nav-item"><a href="/user/register" class="nav-link">회원가입</a></li>
+
+        <% if (user && user.name) { %>
+          <li class="nav-item"><span class="nav-link">환영합니다 <%= user.name %>님!</span></li>
+          <li class="nav-item"><a href="/user/mypage" class="nav-link">마이페이지</a></li>
+          <li class="nav-item"><a href="/user/logout" class="nav-link">로그아웃</a></li>
+        <% } else { %>
+          <li class="nav-item"><a href="/user/login" class="nav-link">로그인</a></li>
+        <% } %>
+
+
       </ul>
     </div>
   </div>
