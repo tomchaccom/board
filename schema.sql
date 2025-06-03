@@ -1,10 +1,4 @@
--- 사용자 테이블
-CREATE TABLE IF NOT EXISTS users (
-                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                     username TEXT UNIQUE NOT NULL,
-                                     password TEXT NOT NULL,
-                                     name TEXT NOT NULL
-);
+
 
 -- 게시글 테이블
 CREATE TABLE IF NOT EXISTS posts (
@@ -23,3 +17,14 @@ CREATE TABLE IF NOT EXISTS files (
                                      filename TEXT NOT NULL,
                                      filepath TEXT NOT NULL,
                                      FOREIGN KEY(post_id) REFERENCES posts(id));
+CREATE TABLE IF NOT EXISTS users (
+                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                     username TEXT UNIQUE NOT NULL,
+                                     password TEXT NOT NULL,
+                                     name TEXT NOT NULL,
+                                     email TEXT,                 -- 이메일 (전체 주소)
+                                     phone TEXT,                 -- 연락처
+                                     gender TEXT,                -- 성별 (male/female)
+                                     privacy_agree BOOLEAN NOT NULL DEFAULT 0, -- 개인정보 활용 동의 (0: 미동의, 1: 동의)
+                                     inquiry_content TEXT        -- 문의내용
+);
