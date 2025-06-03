@@ -30,6 +30,11 @@ app.use(session({
   saveUninitialized: true,
 }));
 
+app.use((req, res, next) => {
+  res.locals.user = req.session.user; // 세션에 저장된 사용자 정보를 res.locals.user에 할당
+  next();
+});
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/user',userRouter);
