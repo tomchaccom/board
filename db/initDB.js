@@ -25,18 +25,23 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 else console.log('Posts table created or already exists.');
             });
 
-            // users 테이블 (회원 관리용)
             db.run(`
                 CREATE TABLE IF NOT EXISTS users (
                                                      id INTEGER PRIMARY KEY AUTOINCREMENT,
                                                      username TEXT UNIQUE NOT NULL,
                                                      password TEXT NOT NULL,
-                                                     email TEXT UNIQUE
+                                                     name TEXT NOT NULL,         -- 새로 추가
+                                                     email TEXT,                 -- (Unique 조건 제거)
+                                                     phone TEXT,                 -- 새로 추가
+                                                     gender TEXT,                -- 새로 추가
+                                                     privacy_agree BOOLEAN NOT NULL DEFAULT 0, -- 새로 추가
+                                                     inquiry_content TEXT        -- 새로 추가
                 );
             `, (err) => {
                 if (err) console.error('Error creating users table:', err.message);
                 else console.log('Users table created or already exists.');
             });
+
 
             // products 테이블
             db.run(`
