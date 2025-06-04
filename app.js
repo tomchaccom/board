@@ -35,6 +35,7 @@ app.use(session({
   saveUninitialized: true,
   cookie: { maxAge: 60 * 60 * 1000 } // 세션 유효 시간 1시간 설정 (밀리초)
 }));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 // 2. 이 부분은 제거하거나 주석 처리합니다. 각 라우터에서 명시적으로 user 정보를 EJS로 넘겨주세요.
 /*
