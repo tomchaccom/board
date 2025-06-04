@@ -1,19 +1,33 @@
-var express = require('express');
-var router = express.Router();
-var path = require('path');
-var sqlite3 = require('sqlite3').verbose();
+// routes/index.js
 
-// DB 파일 경로 (필요에 따라 경로 조정)
-var dbPath = path.resolve(__dirname, '../db/board.db');
-var db = new sqlite3.Database(dbPath);
+const express = require('express');
+const router = express.Router();
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
+// DB 파일 경로 (다른 라우터와 동일하게 '../db/board.db'를 사용한다고 가정)
+const dbPath = path.join(__dirname, '../db/board.db');
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Index 라우터 데이터베이스 연결 오류:', err.message);
+  } else {
+    console.log('Index 라우터 데이터베이스 연결 성공:', dbPath);
+  }
+});
+
+/* GET home page. */
 router.get('/', function(req, res, next) {
-  db.all('SELECT * FROM products LIMIT 4', [], (err, products) => {
+  // 메인 페이지에 필요한 데이터를 가져오고, 로그인 상태 정보를 함께 전달합니다.
+  // 여기서는 간단히 최신 상품 4개를 가져오는 예시를 들겠습니다.
+  db.all('SELECT * FROM products ORDER BY id DESC LIMIT 4', [], (err, products) => {
     if (err) {
-      console.error('DB 조회 오류:', err.message);
-      return next(err);
+      console.error('메인 페이지 상품 조회 오류:', err.message);
+      // 오류 발생 시에도 user 정보를 넘겨주어 네비게이션 바가 깨지지 않도록 합니다.
+      return res.render('index', { products: [], user: req.session.user, title: 'My Shop' });
     }
-    res.render('index', { title: '명성 라면', products: products });
+    // 중요한 부분: req.session.user 객체를 'user'라는 이름으로 EJS 템플릿에 전달
+    res.render('index', { products: products, user: req.session.user, title: 'My Shop' });
   });
 });
+
 module.exports = router;
