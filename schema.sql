@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS files (
                                      filename TEXT NOT NULL,
                                      filepath TEXT NOT NULL,
                                      FOREIGN KEY(post_id) REFERENCES posts(id));
+-- 회원 테이블
 CREATE TABLE IF NOT EXISTS users (
                                      id INTEGER PRIMARY KEY AUTOINCREMENT,
                                      username TEXT UNIQUE NOT NULL,
@@ -25,6 +26,9 @@ CREATE TABLE IF NOT EXISTS users (
                                      email TEXT,                 -- 이메일 (전체 주소)
                                      phone TEXT,                 -- 연락처
                                      gender TEXT,                -- 성별 (male/female)
+                                     address TEXT,               -- 주소 (새로 추가)
+                                     sms_consent BOOLEAN DEFAULT 0,  -- SMS 수신 동의 (새로 추가, 0: 미동의, 1: 동의)
+                                     email_consent BOOLEAN DEFAULT 0, -- 이메일 수신 동의 (새로 추가, 0: 미동의, 1: 동의)
                                      privacy_agree BOOLEAN NOT NULL DEFAULT 0, -- 개인정보 활용 동의 (0: 미동의, 1: 동의)
                                      inquiry_content TEXT        -- 문의내용
 );

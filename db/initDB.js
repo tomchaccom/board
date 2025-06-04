@@ -32,10 +32,13 @@ const db = new sqlite3.Database(dbPath, (err) => {
                                                      password TEXT NOT NULL,
                                                      name TEXT NOT NULL,         -- 새로 추가
                                                      email TEXT,                 -- (Unique 조건 제거)
-                                                     phone TEXT,                 -- 새로 추가
-                                                     gender TEXT,                -- 새로 추가
-                                                     privacy_agree BOOLEAN NOT NULL DEFAULT 0, -- 새로 추가
-                                                     inquiry_content TEXT        -- 새로 추가
+                                                     phone TEXT,                 -- 연락처
+                                                     gender TEXT,                -- 성별 (male/female)
+                                                     address TEXT,               -- 주소 (새로 추가)
+                                                     sms_consent BOOLEAN DEFAULT 0,  -- SMS 수신 동의 (새로 추가, 0: 미동의, 1: 동의)
+                                                     email_consent BOOLEAN DEFAULT 0, -- 이메일 수신 동의 (새로 추가, 0: 미동의, 1: 동의)
+                                                     privacy_agree BOOLEAN NOT NULL DEFAULT 0, -- 개인정보 활용 동의 (0: 미동의, 1: 동의)
+                                                     inquiry_content TEXT
                 );
             `, (err) => {
                 if (err) console.error('Error creating users table:', err.message);
