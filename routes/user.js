@@ -12,8 +12,10 @@ const db = new sqlite3.Database(dbPath);
 // 미들웨어: 로그인 여부 확인
 function isAuthenticated(req, res, next) {
     if (req.session.user) {
-        req.userId = req.session.user.id; // 로그인된 사용자의 ID를 req 객체에 추가
-        req.username = req.session.user.username; // 로그인된 사용자의 username도 추가 (필요할 경우)
+        req.userId = req.session.user.id;
+        req.username = req.session.user.username;
+        // req.session.user.isAdmin 값을 미들웨어에서 바로 활용할 수 있도록 보장
+        req.isAdmin = req.session.user.isAdmin;
         next();
     } else {
         res.redirect('/user/login?message=로그인이 필요합니다.');
@@ -74,23 +76,37 @@ router.get('/login', (req, res) => {
     res.render('login', { message: message }); // login.ejs로 message 변수를 넘겨줌
 });
 
-// ...
 
 // 로그인 처리
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
 
     db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
-        if (err || !user) {
-            return res.send('존재하지 않는 사용자입니다.');
+        if (err) { // DB 조회 오류 처리
+            console.error('로그인 DB 조회 오류:', err.message); // 자세한 로그
+            return res.status(500).send('서버 오류가 발생했습니다.');
+        }
+        if (!user) { // 사용자가 존재하지 않을 경우
+            return res.status(400).send('존재하지 않는 사용자명입니다.'); // 더 구체적인 메시지
         }
 
-        const match = await bcrypt.compare(password, user.password);
-        if (match) {
-            req.session.user = user;
-            res.redirect('/');
-        } else {
-            res.send('비밀번호가 일치하지 않습니다.');
+        try {
+            const match = await bcrypt.compare(password, user.password); // 입력된 비밀번호와 DB의 해싱된 비밀번호 비교
+            if (match) {
+                // 로그인 성공: 세션에 필요한 사용자 정보만 저장
+                req.session.user = {
+                    id: user.id,
+                    username: user.username,
+                    name: user.name,
+                    isAdmin: user.isAdmin === 1 // DB의 0/1을 명확히 true/false (boolean)로 변환
+                };
+                res.redirect('/'); // 로그인 후 메인 페이지로 리다이렉트
+            } else {
+                res.status(400).send('비밀번호가 일치하지 않습니다.'); // 비밀번호 불일치 메시지
+            }
+        } catch (compareErr) {
+            console.error('비밀번호 비교 오류:', compareErr.message); // 해싱 비교 중 오류
+            res.status(500).send('서버 오류가 발생했습니다.');
         }
     });
 });

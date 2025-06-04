@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <%- include('../partials/head') %>
+    <title>공지사항 작성</title>
+    <style>
+        .container { max-width: 800px; margin-top: 50px; }
+        textarea { height: 300px; }
+    </style>
+</head>
+<body>
+<%- include('../partials/navbar') %>
+<div class="container">
+    <h2 class="mb-4">공지사항 작성</h2>
+    <form action="/notice/create" method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="title" class="form-label">제목</label>
+            <input type="text" class="form-control" id="title" name="title" required>
+        </div>
+        <div class="mb-3">
+            <label for="content" class="form-label">내용</label>
+            <textarea class="form-control" id="content" name="content" rows="10" required></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="noticeFile" class="form-label">파일 첨부</label>
+            <input type="file" class="form-control" id="noticeFile" name="noticeFile">
+            <div class="form-text">하나의 파일만 첨부 가능합니다.</div>
+        </div>
+        <button type="submit" class="btn btn-primary">작성</button>
+        <a href="/notice" class="btn btn-secondary">취소</a>
+    </form>
+</div>
+<%- include('../partials/footer') %>
+</body>
+</html>

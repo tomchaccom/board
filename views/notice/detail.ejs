@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <%- include('../partials/head') %>
+    <title><%= notice.title %></title>
+    <style>
+        .container { max-width: 800px; margin-top: 50px; }
+        .notice-meta { font-size: 0.9em; color: #666; margin-bottom: 20px; }
+        .notice-content { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+        .file-list { margin-top: 20px; border-top: 1px dashed #ddd; padding-top: 15px; }
+        .file-list p { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+<%- include('../partials/navbar') %>
+<div class="container">
+    <h2 class="mb-4"><%= notice.title %></h2>
+    <div class="notice-meta">
+        작성자: <%= notice.author %> | 작성일: <%= new Date(notice.created_at).toLocaleString() %> | 조회수: <%= notice.views %>
+    </div>
+    <div class="notice-content">
+        <p><%= notice.content.replace(/\n/g, '<br>') %></p>
+    </div>
+
+    <% if (notice.files && notice.files.length > 0) { %>
+        <div class="file-list">
+            <h4>첨부 파일</h4>
+            <ul>
+                <% notice.files.forEach(file => { %>
+                    <li><a href="/notice/download/<%= file.id %>" download="<%= file.filename %>"><%= file.filename %></a></li>
+                <% }); %>
+            </ul>
+        </div>
+    <% } %>
+
+    <div class="mt-4">
+        <a href="/notice" class="btn btn-secondary">목록으로</a>
+        <% if (user && user.isAdmin) { %>
+            <a href="/notice/edit/<%= notice.id %>" class="btn btn-warning">수정</a>
+            <form action="/notice/delete/<%= notice.id %>" method="POST" onsubmit="return confirm('정말로 이 공지사항을 삭제하시겠습니까?');" style="display: inline-block;">
+                <button type="submit" class="btn btn-danger">삭제</button>
+            </form>
+        <% } %>
+    </div>
+</div>
+<%- include('../partials/footer') %>
+</body>
+</html>
