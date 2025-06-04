@@ -1,22 +1,26 @@
 
 
--- 게시글 테이블
+-- 게시글 테이블 (user_id 컬럼 추가 및 외래 키 설정)
 CREATE TABLE IF NOT EXISTS posts (
                                      id INTEGER PRIMARY KEY AUTOINCREMENT,
                                      title TEXT NOT NULL,
                                      content TEXT NOT NULL,
                                      parent_id INTEGER,
-                                     author TEXT NOT NULL,
-                                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+                                     author TEXT NOT NULL,          -- 작성자 이름 (기존 유지)
+                                     user_id INTEGER NOT NULL,      -- 작성자 ID (새로 추가)
+                                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
 
--- 파일 업로드 정보 테이블 (공지사항 첨부 파일용)
+
+-- files 테이블 (schema.sql 파일)
 CREATE TABLE IF NOT EXISTS files (
                                      id INTEGER PRIMARY KEY AUTOINCREMENT,
                                      post_id INTEGER NOT NULL,
                                      filename TEXT NOT NULL,
                                      filepath TEXT NOT NULL,
-                                     FOREIGN KEY(post_id) REFERENCES posts(id));
+                                     FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE -- **이 부분 확인 및 추가**
+    );
 -- 회원 테이블
 CREATE TABLE IF NOT EXISTS users (
                                      id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,4 +35,13 @@ CREATE TABLE IF NOT EXISTS users (
                                      email_consent BOOLEAN DEFAULT 0, -- 이메일 수신 동의 (새로 추가, 0: 미동의, 1: 동의)
                                      privacy_agree BOOLEAN NOT NULL DEFAULT 0, -- 개인정보 활용 동의 (0: 미동의, 1: 동의)
                                      inquiry_content TEXT        -- 문의내용
+);
+-- 공지사항 테이블
+CREATE TABLE IF NOT EXISTS notices (
+                                       id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                       title TEXT NOT NULL,
+                                       content TEXT NOT NULL,
+                                       author TEXT NOT NULL DEFAULT '관리자', -- 공지사항 작성자는 기본 '관리자'
+                                       views INTEGER DEFAULT 0, -- 조회수
+                                       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

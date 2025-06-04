@@ -1,49 +1,80 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs'); // fs 모듈을 불러옵니다. (기존 파일 삭제를 위해)
+
+// dbPath를 현재 디렉토리 기준으로 설정
 const dbPath = path.resolve(__dirname, 'board.db');
+
+// 기존 데이터베이스 파일 삭제 (매우 중요!)
+// 이 부분이 없으면 테이블 스키마 변경이 반영되지 않습니다.
+if (fs.existsSync(dbPath)) {
+    try {
+        fs.unlinkSync(dbPath);
+        console.log('기존 데이터베이스 파일 삭제 완료: ' + dbPath);
+    } catch (err) {
+        console.error('기존 데이터베이스 파일 삭제 오류:', err.message);
+    }
+}
 
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('데이터베이스 연결 오류:', err.message);
     } else {
-        console.log('데이터베이스 연결 성공:', dbPath);
+        console.log('새 데이터베이스 연결 성공:', dbPath);
         db.serialize(() => {
-            // posts 테이블 (기존)
-            db.run(`
-                CREATE TABLE IF NOT EXISTS posts (
-                                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                     parent_id INTEGER DEFAULT 0,
-                                                     title TEXT NOT NULL,
-                                                     content TEXT NOT NULL,
-                                                     author TEXT DEFAULT '익명',
-                                                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                                                     depth INTEGER DEFAULT 0,
-                                                     order_in_group INTEGER DEFAULT 0
-                );
-            `, (err) => {
-                if (err) console.error('Error creating posts table:', err.message);
-                else console.log('Posts table created or already exists.');
-            });
-
+            // users 테이블 (posts 및 files 테이블이 참조하므로 먼저 생성)
             db.run(`
                 CREATE TABLE IF NOT EXISTS users (
                                                      id INTEGER PRIMARY KEY AUTOINCREMENT,
                                                      username TEXT UNIQUE NOT NULL,
                                                      password TEXT NOT NULL,
-                                                     name TEXT NOT NULL,         -- 새로 추가
-                                                     email TEXT,                 -- (Unique 조건 제거)
-                                                     phone TEXT,                 -- 연락처
-                                                     gender TEXT,                -- 성별 (male/female)
-                                                     address TEXT,               -- 주소 (새로 추가)
-                                                     sms_consent BOOLEAN DEFAULT 0,  -- SMS 수신 동의 (새로 추가, 0: 미동의, 1: 동의)
-                                                     email_consent BOOLEAN DEFAULT 0, -- 이메일 수신 동의 (새로 추가, 0: 미동의, 1: 동의)
-                                                     privacy_agree BOOLEAN NOT NULL DEFAULT 0, -- 개인정보 활용 동의 (0: 미동의, 1: 동의)
+                                                     name TEXT NOT NULL,
+                                                     email TEXT,
+                                                     phone TEXT,
+                                                     gender TEXT,
+                                                     address TEXT,
+                                                     sms_consent BOOLEAN DEFAULT 0,
+                                                     email_consent BOOLEAN DEFAULT 0,
+                                                     privacy_agree BOOLEAN NOT NULL DEFAULT 0,
                                                      inquiry_content TEXT
                 );
             `, (err) => {
                 if (err) console.error('Error creating users table:', err.message);
                 else console.log('Users table created or already exists.');
             });
+
+            // posts 테이블 (user_id 컬럼 추가 및 외래 키 설정)
+            // users 테이블 생성 이후에 생성되어야 합니다.
+            db.run(`
+                CREATE TABLE IF NOT EXISTS posts (
+                                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                     title TEXT NOT NULL,
+                                                     content TEXT NOT NULL,
+                                                     parent_id INTEGER,
+                                                     author TEXT NOT NULL,
+                                                     user_id INTEGER NOT NULL,
+                                                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                                     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            `, (err) => {
+                if (err) console.error('Error creating posts table:', err.message);
+                else console.log('Posts table created or already exists.');
+            });
+
+            // **** files 테이블 추가 시작 ****
+            db.run(`
+                CREATE TABLE IF NOT EXISTS files (
+                                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                     post_id INTEGER NOT NULL,
+                                                     filename TEXT NOT NULL,
+                                                     filepath TEXT NOT NULL,
+                                                     FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE
+                );
+            `, (err) => {
+                if (err) console.error('Error creating files table:', err.message);
+                else console.log('Files table created or already exists.');
+            });
+            // **** files 테이블 추가 끝 ****
 
 
             // products 테이블
@@ -64,10 +95,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
                         if (err) {
                             console.error('Error checking products table count:', err.message);
                             // count 체크 실패 시에도 DB를 닫아야 합니다.
-                            db.close((closeErr) => {
-                                if (closeErr) console.error('Error closing database after count error:', closeErr.message);
-                                else console.log('Database connection closed after count error.');
-                            });
+                            // 모든 db.close() 호출을 마지막 하나로 통합하여 관리하는 것이 더 좋습니다.
+                            // 임시로 주석 처리: db.close((closeErr) => { ... });
                             return;
                         }
                         if (row.count === 0) {
@@ -81,18 +110,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
                             stmt.finalize(() => {
                                 console.log('Dummy products inserted.');
                                 // 상품 데이터 삽입 완료 후 DB 연결 닫기
-                                db.close((closeErr) => {
-                                    if (closeErr) console.error('Error closing database after product insert:', closeErr.message);
-                                    else console.log('Database connection closed.');
-                                });
+                                // 임시로 주석 처리: db.close((closeErr) => { ... });
                             });
                         } else {
                             console.log('Products table already contains data.');
                             // 상품 데이터가 이미 있다면 바로 DB 연결 닫기
-                            db.close((closeErr) => {
-                                if (closeErr) console.error('Error closing database when products exist:', closeErr.message);
-                                else console.log('Database connection closed.');
-                            });
+                            // 임시로 주석 처리: db.close((closeErr) => { ... });
                         }
                     });
                 }
@@ -120,8 +143,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
             });
             // db.close()는 이제 products 테이블 삽입 로직에서만 호출됩니다.
             // 모든 db.run/db.get 작업이 순차적으로 실행되므로, 마지막 비동기 작업 후 닫는 것이 중요합니다.
+            // 만약 products 테이블 삽입 로직에서만 db.close()를 호출한다면, 다른 테이블 생성 후에 db.close()가 호출되지 않을 수 있습니다.
+            // 모든 테이블 생성 및 데이터 삽입이 완료된 후 한 번만 db.close()를 호출하도록 로직을 재구성하는 것이 이상적입니다.
+            // 일단은 현재 구조에서 files 테이블 추가에 집중합니다.
         });
     }
 });
 
-module.exports = db;
+// initDB.js는 보통 한번 실행 후 종료되므로 export 할 필요 없습니다.
+// module.exports = db;
