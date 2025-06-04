@@ -7,16 +7,20 @@ const router = express.Router();
 const dbPath = path.join(__dirname, '../db/board.db');
 const db = new sqlite3.Database(dbPath);
 
+// ... (기존 require 및 db 연결 코드)
+
 // 미들웨어: 로그인 여부 확인
 function isAuthenticated(req, res, next) {
-    // req.session.user는 로그인 시 세션에 저장한 사용자 정보입니다.
     if (req.session.user) {
-        next(); // 로그인된 사용자면 다음 미들웨어 또는 라우터로 이동
+        req.userId = req.session.user.id; // 로그인된 사용자의 ID를 req 객체에 추가
+        req.username = req.session.user.username; // 로그인된 사용자의 username도 추가 (필요할 경우)
+        next();
     } else {
-        // 로그인되지 않았다면 로그인 페이지로 리다이렉트 (메시지 포함)
         res.redirect('/user/login?message=로그인이 필요합니다.');
     }
 }
+
+// ... (나머지 라우터 코드)
 
 // 회원가입 페이지
 router.get('/register', (req, res) => {
