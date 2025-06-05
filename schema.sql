@@ -1,16 +1,17 @@
 
 
--- 게시글 테이블 (user_id 컬럼 추가 및 외래 키 설정)
 CREATE TABLE IF NOT EXISTS posts (
                                      id INTEGER PRIMARY KEY AUTOINCREMENT,
                                      title TEXT NOT NULL,
                                      content TEXT NOT NULL,
-                                     parent_id INTEGER,
-                                     author TEXT NOT NULL,          -- 작성자 이름 (기존 유지)
-                                     user_id INTEGER NOT NULL,      -- 작성자 ID (새로 추가)
+                                     parent_id INTEGER, -- 댓글/대댓글 처리용
+                                     author TEXT NOT NULL,
+                                     user_id INTEGER NOT NULL,
                                      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                                     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                                     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                     FOREIGN KEY(parent_id) REFERENCES posts(id) ON DELETE CASCADE  -- 🔥 이 줄이 핵심!
     );
+
 
 
 -- files 테이블 (schema.sql 파일)

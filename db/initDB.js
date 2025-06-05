@@ -95,7 +95,9 @@ const initializeDatabase = async () => {
                 user_id INTEGER NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-            );
+                FOREIGN KEY(parent_id) REFERENCES posts(id) ON DELETE CASCADE
+
+                );
         `);
         console.log('Posts table created or already exists.');
 

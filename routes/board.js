@@ -39,6 +39,28 @@ function isAuthenticated(req, res, next) {
     }
 }
 
+async function getAllChildPostIds(db, parentId) {
+    const childIds = [];
+
+    async function recurse(currentId) {
+        const rows = await new Promise((resolve, reject) => {
+            db.all('SELECT id FROM posts WHERE parent_id = ?', [currentId], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+
+        for (const row of rows) {
+            childIds.push(row.id);
+            await recurse(row.id); // 재귀적으로 하위 댓글 탐색
+        }
+    }
+
+    await recurse(parentId);
+    return childIds;
+}
+
+
 // 게시글 목록
 // 게시글 목록 (수정된 부분)
 router.get('/', isAuthenticated, (req, res) => {
@@ -325,50 +347,75 @@ router.post('/edit/:id', isAuthenticated, upload.single('file'), (req, res) => {
     });
 });
 
-// 게시글 삭제 처리 (권한 확인)
-router.post('/delete/:id', isAuthenticated, (req, res) => {
-    const postId = req.params.id;
+// 게시글 삭제 처리 (권한 확인 및 계단식 삭제, 재귀 하위 답글 포함)
+router.post('/delete/:id', isAuthenticated, async (req, res) => {
+    const postId = parseInt(req.params.id);
     const currentUserId = req.userId;
+    const isAdmin = req.session.user && req.session.user.isAdmin === 1;
 
-    db.get('SELECT user_id FROM posts WHERE id = ?', [postId], (err, post) => {
+    db.get('SELECT user_id, author FROM posts WHERE id = ?', [postId], async (err, post) => {
         if (err || !post) {
-            console.error(err ? '게시글 찾기 오류 (삭제 처리):' + err.message : '삭제할 게시글을 찾을 수 없음');
+            console.error(err ? '게시글 조회 실패:' + err.message : '삭제할 게시글이 없음');
             return res.status(404).send('게시글을 찾을 수 없거나 오류가 발생했습니다.');
         }
 
-        // 권한 확인: 로그인한 사용자가 게시글 작성자인지 확인
-        if (post.user_id !== currentUserId) {
+        const isAuthor = (post.user_id === currentUserId);
+        const isAnonPost = (post.author === '익명');
+
+        if (!isAuthor && !(isAnonPost && isAdmin)) {
             return res.status(403).send('삭제 권한이 없습니다.');
         }
 
-        // 파일 정보 조회 및 실제 파일 삭제 (비동기 처리)
-        db.get('SELECT filepath FROM files WHERE post_id = ?', [postId], (fileErr, file) => {
-            if (fileErr) {
-                console.error('파일 경로 조회 실패 (삭제):', fileErr.message);
-            }
-            if (file && fs.existsSync(path.join(__dirname, '../public', file.filepath))) {
-                fs.unlink(path.join(__dirname, '../public', file.filepath), (unlinkErr) => {
-                    if (unlinkErr) console.error('실제 파일 삭제 실패:', unlinkErr.message);
-                });
-            }
+        try {
+            const allIdsToDelete = [postId, ...await getAllChildPostIds(db, postId)];
+            const placeholders = allIdsToDelete.map(() => '?').join(',');
 
-            // files 테이블에서 파일 정보 삭제
-            db.run('DELETE FROM files WHERE post_id = ?', [postId], (deleteFileDBErr) => {
-                if (deleteFileDBErr) {
-                    console.error('files DB 기록 삭제 실패:', deleteFileDBErr.message);
-                    // 파일 DB 기록 삭제 실패해도 게시글 삭제는 시도
-                }
+            db.serialize(() => {
+                db.run('BEGIN TRANSACTION;');
 
-                // posts 테이블에서 게시글 삭제
-                db.run('DELETE FROM posts WHERE id = ?', [postId], (postDeleteErr) => {
-                    if (postDeleteErr) {
-                        console.error('게시글 삭제 실패 (posts 테이블):', postDeleteErr.message);
-                        return res.status(500).send('글 삭제 실패');
+                db.all(`SELECT filepath FROM files WHERE post_id IN (${placeholders})`, allIdsToDelete, (fileErr, files) => {
+                    if (fileErr) {
+                        console.error('파일 조회 오류:', fileErr.message);
+                        db.run('ROLLBACK;');
+                        return res.status(500).send('파일 조회 중 오류 발생');
                     }
-                    res.redirect('/board');
+
+                    files.forEach(file => {
+                        const filePath = path.join(__dirname, '../public', file.filepath);
+                        if (fs.existsSync(filePath)) {
+                            fs.unlink(filePath, err => {
+                                if (err) console.error('파일 삭제 오류:', err.message);
+                            });
+                        }
+                    });
+
+                    db.run(`DELETE FROM files WHERE post_id IN (${placeholders})`, allIdsToDelete, (fileDelErr) => {
+                        if (fileDelErr) {
+                            console.error('파일 DB 삭제 오류:', fileDelErr.message);
+                        }
+                    });
+
+                    db.run(`DELETE FROM posts WHERE id IN (${placeholders})`, allIdsToDelete, (postDelErr) => {
+                        if (postDelErr) {
+                            console.error('게시글 삭제 오류:', postDelErr.message);
+                            db.run('ROLLBACK;');
+                            return res.status(500).send('게시글 삭제 실패');
+                        }
+
+                        db.run('COMMIT;', (commitErr) => {
+                            if (commitErr) {
+                                console.error('커밋 오류:', commitErr.message);
+                                return res.status(500).send('삭제 중 커밋 실패');
+                            }
+                            return res.redirect('/board');
+                        });
+                    });
                 });
             });
-        });
+        } catch (e) {
+            console.error('재귀 삭제 오류:', e.message);
+            return res.status(500).send('게시글 삭제 중 오류 발생');
+        }
     });
 });
 
