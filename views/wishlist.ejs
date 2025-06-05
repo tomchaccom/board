@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>내 위시리스트</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <style>
+        /* 위시리스트에 특화된 스타일 */
+        .wishlist-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+        .wishlist-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            width: 280px;
+        }
+        .wishlist-item img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-bottom: 1px solid #eee;
+        }
+        .wishlist-item-body {
+            padding: 1rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .wishlist-item-body h5 {
+            font-size: 1.15rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .wishlist-item-body p {
+            font-size: 1.25rem;
+            color: #007bff;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .item-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .item-actions .btn {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        /* 미디어 쿼리: 작은 화면에서는 카드를 더 유연하게 조정 */
+        @media (max-width: 768px) {
+            .wishlist-item {
+                width: 100%;
+                max-width: 350px;
+            }
+            .wishlist-grid {
+                padding: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">🛒 MyShop</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="/products">상품</a></li>
+                <li class="nav-item"><a class="nav-link" href="/cart">장바구니</a></li>
+                <li class="nav-item"><a class="nav-link" href="/wishlist">위시리스트</a></li>
+                <li class="nav-item"><a class="nav-link" href="/board">게시판</a></li>
+                <% if (user) { %>
+                    <li class="nav-item"><a class="nav-link" href="/user/logout">로그아웃 (<%= user.username %>)</a></li>
+                <% } else { %>
+                    <li class="nav-item"><a class="nav-link" href="/user/login">로그인</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/register">회원가입</a></li>
+                <% } %>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-5">
+    <h1 class="mb-4 text-center">💖 내 위시리스트</h1>
+
+    <% if (products && products.length > 0) { %>
+        <div class="wishlist-grid">
+            <% products.forEach(product => { %>
+                <div class="wishlist-item">
+                    <img src="<%= product.image || '/images/default_product.jpg' %>" alt="<%= product.name %>">
+                    <div class="wishlist-item-body">
+                        <div>
+                            <h5 class="card-title text-truncate"><%= product.name %></h5>
+                            <p class="card-text"><%= product.price.toLocaleString() %>원</p>
+                        </div>
+                        <div class="item-actions">
+                            <a href="/products/<%= product.id %>" class="btn btn-outline-primary btn-sm">상세 보기</a>
+                            <button type="button" class="btn btn-danger btn-sm remove-wishlist-btn" data-product-id="<%= product.id %>">위시리스트에서 제거</button>
+                            <form action="/cart/add" method="POST" class="d-inline-block m-0">
+                                <input type="hidden" name="productId" value="<%= product.id %>">
+                                <input type="hidden" name="productName" value="<%= product.name %>">
+                                <input type="hidden" name="productPrice" value="<%= product.price %>">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-success btn-sm">장바구니 담기</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    <% } else { %>
+        <p class="text-center text-muted">위시리스트에 담긴 상품이 없습니다.</p>
+        <p class="text-center">
+            <a href="/products" class="btn btn-primary">상품 보러가기</a>
+        </p>
+    <% } %>
+</div> <footer class="bg-dark text-white text-center py-3 mt-5">
+    &copy; 2025 MyShop. All rights reserved.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 위시리스트에서 제거 버튼을 위한 JavaScript
+    document.querySelectorAll('.remove-wishlist-btn').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            const productId = event.target.dataset.productId;
+
+            try {
+                const response = await fetch('/wishlist/remove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ productId: productId })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(result.message);
+                    location.reload(); // 가장 간단한 방법으로 페이지 새로고침
+                } else {
+                    alert('오류: ' + (result.message || '위시리스트에서 제거 중 오류가 발생했습니다.'));
+                }
+            } catch (error) {
+                console.error('위시리스트 제거 요청 실패:', error);
+                alert('요청 중 네트워크 오류가 발생했습니다.');
+            }
+        });
+    });
+</script>
+</body>
+</html>

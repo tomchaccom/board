@@ -19,6 +19,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const userRouter = require('./routes/user');
 const noticeRoutes = require('./routes/notice');
+const wishlistRouter = require('./routes/wishlist');
 
 
 
@@ -69,6 +70,7 @@ app.use('/notice', noticeRoutes);
 
 app.use('/product', productRouter); // 상품 라우터
 app.use('/products', productRouter); // 상품 라우터
+app.use('/wishlist', wishlistRouter);
 
 // '/login' 리다이렉트 (필요 없으면 제거 가능)
 app.get('/login', (req, res) => {
