@@ -46,3 +46,23 @@ CREATE TABLE IF NOT EXISTS notices (
                                        views INTEGER DEFAULT 0, -- 조회수
                                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS products (
+                                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        name TEXT NOT NULL,
+                                        price INTEGER NOT NULL,
+                                        description TEXT,
+                                        image_url TEXT, -- 상품 이미지 경로
+                                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 기존에 제안했던 wishlists 테이블을 다음과 같이 변경
+CREATE TABLE IF NOT EXISTS wishlists (
+                                         id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                         user_id INTEGER NOT NULL,            -- 어떤 사용자가 찜했는지 (users 테이블의 id 참조)
+                                         product_id INTEGER NOT NULL,         -- 어떤 상품을 찜했는지 (products 테이블의 id 참조)
+                                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                         UNIQUE(user_id, product_id),         -- 한 사용자가 같은 상품을 두 번 찜할 수 없도록
+                                         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE -- products 테이블 참조
+    );

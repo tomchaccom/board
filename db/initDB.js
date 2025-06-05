@@ -3,8 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcrypt'); // bcrypt 모듈 추가
 
-// dbPath를 현재 디렉토리 기준으로 설정 (db 폴더 내 board.db)
-const dbPath = path.resolve(__dirname, 'board.db');
+// dbPath를 현재 디렉토리 (db 폴더) 기준으로 설정
+// initDB.js가 db 폴더 안에 있다면, board.db도 같은 db 폴더 안에 생성됩니다.
+// 다른 라우트 파일에서 '../db/board.db'로 참조하면 됩니다.
+const dbPath = path.join(__dirname, 'board.db');
 
 // 기존 데이터베이스 파일 삭제 (개발 단계에서 스키마 변경 시 유용)
 if (fs.existsSync(dbPath)) {
@@ -60,8 +62,8 @@ const initializeDatabase = async () => {
                 sms_consent BOOLEAN DEFAULT 0,
                 email_consent BOOLEAN DEFAULT 0,
                 privacy_agree BOOLEAN NOT NULL DEFAULT 0,
-                isAdmin BOOLEAN DEFAULT 0,
-                inquiry_content TEXT        -- 문의내용
+                isAdmin BOOLEAN DEFAULT 0, -- **isAdmin 컬럼 추가됨**
+                inquiry_content TEXT
             );
         `);
         console.log('Users table created or already exists.');
@@ -94,10 +96,9 @@ const initializeDatabase = async () => {
                 author TEXT NOT NULL,
                 user_id INTEGER NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE, -- 쉼표 추가
                 FOREIGN KEY(parent_id) REFERENCES posts(id) ON DELETE CASCADE
-
-                );
+            );
         `);
         console.log('Posts table created or already exists.');
 
@@ -143,8 +144,9 @@ const initializeDatabase = async () => {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 price INTEGER NOT NULL,
-                image TEXT,
-                description TEXT
+                image TEXT, -- image_url 대신 image로 컬럼명 통일
+                description TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP -- 생성일시 추가 (선택 사항)
             );
         `);
         console.log('Products table created or already exists.');
@@ -162,17 +164,33 @@ const initializeDatabase = async () => {
         } else {
             console.log('Products table already contains data.');
         }
-        // notice_files 테이블
+
+        // wishlists 테이블 생성 (products 테이블을 참조)
+        await runAsync(`
+            CREATE TABLE IF NOT EXISTS wishlists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL, -- posts.id가 아니라 products.id를 참조
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, product_id), -- 한 사용자가 같은 상품을 두 번 찜할 수 없도록
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            );
+        `);
+        console.log('Wishlists table created or already exists.');
+
+        // notice_files 테이블 생성
         await runAsync(`
             CREATE TABLE IF NOT EXISTS notice_files (
-                                                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                        notice_id INTEGER NOT NULL,
-                                                        filename TEXT NOT NULL,
-                                                        filepath TEXT NOT NULL,
-                                                        FOREIGN KEY(notice_id) REFERENCES notices(id) ON DELETE CASCADE
-                );
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                notice_id INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                filepath TEXT NOT NULL,
+                FOREIGN KEY(notice_id) REFERENCES notices(id) ON DELETE CASCADE
+            );
         `);
         console.log('Notice_files table created or already exists.');
+
         // cart_items 테이블 생성
         await runAsync(`
             CREATE TABLE IF NOT EXISTS cart_items (

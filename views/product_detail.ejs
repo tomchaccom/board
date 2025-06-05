@@ -6,9 +6,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="/stylesheets/style.css" />
+    <style>
+        /* 추가적인 상세 페이지 스타일 */
+        .product-detail-container {
+            display: flex;
+            flex-wrap: wrap; /* 반응형을 위해 flex-wrap 추가 */
+            gap: 30px;
+            padding: 30px;
+            max-width: 900px;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background-color: #fff;
+        }
+        .product-detail-image {
+            flex: 1;
+            min-width: 300px; /* 작은 화면에서 이미지 최소 너비 */
+        }
+        .product-detail-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        .product-detail-info {
+            flex: 2;
+            min-width: 300px; /* 작은 화면에서 정보 최소 너비 */
+        }
+        .product-detail-info h2 {
+            font-size: 2.2em;
+            margin-top: 0;
+            color: #333;
+        }
+        .product-detail-info h4.text-primary {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .product-detail-info p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 30px;
+        }
+        .detail-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap; /* 버튼이 너무 많을 때 줄 바꿈 */
+            align-items: center; /* 버튼 정렬 */
+        }
+    </style>
 </head>
 <body>
-<!-- 네비게이션 -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="/">🛒 MyShop</a>
@@ -17,46 +66,105 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="/product">상품</a></li>
+                <li class="nav-item"><a class="nav-link" href="/products">상품</a></li>
                 <li class="nav-item"><a class="nav-link" href="/cart">장바구니</a></li>
                 <li class="nav-item"><a class="nav-link" href="/board">게시판</a></li>
+                <% if (user) { %>
+                    <li class="nav-item"><a class="nav-link" href="/user/logout">로그아웃 (<%= user.username %>)</a></li>
+                <% } else { %>
+                    <li class="nav-item"><a class="nav-link" href="/user/login">로그인</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/register">회원가입</a></li>
+                <% } %>
             </ul>
         </div>
     </div>
 </nav>
 
-<!-- 본문 -->
 <div class="container my-5">
-    <div class="row g-4">
-        <!-- 이미지 -->
-        <div class="col-md-6">
-            <img src="<%= product.image %>"alt="<%= product.name %>" class="img-fluid rounded shadow-sm" style="max-height: 450px; object-fit: contain;" />
+    <div class="product-detail-container">
+        <div class="product-detail-image">
+            <img src="<%= product.image || '/images/default_product.jpg' %>" alt="<%= product.name %>" class="img-fluid rounded shadow-sm" style="max-height: 450px; object-fit: contain;" />
         </div>
 
-        <!-- 상세정보 -->
-        <div class="col-md-6">
-            <h2><%= product.name %></h2>
+        <div class="product-detail-info">
+            <h1 class="mb-3"><%= product.name %></h1>
             <h4 class="text-primary mb-3">₩ <%= product.price.toLocaleString() %></h4>
-            <p><%= product.description %></p>
+            <p class="mb-4"><%= product.description %></p>
 
             <form action="/cart/add" method="POST" class="mt-4">
                 <input type="hidden" name="productId" value="<%= product.id %>" />
-                <input type="hidden" name="productName" value="<%= product.name %>" />   <input type="hidden" name="productPrice" value="<%= product.price %>" /> <div class="mb-3">
-                <div class="mb-3">
-                    <label for="quantity" class="form-label">수량</label>
+                <input type="hidden" name="productName" value="<%= product.name %>" />
+                <input type="hidden" name="productPrice" value="<%= product.price %>" />
+                <div class="mb-3"> <label for="quantity" class="form-label">수량</label>
                     <input type="number" name="quantity" id="quantity" value="1" min="1" class="form-control" style="width: 100px;" />
                 </div>
-                <button type="submit" class="btn btn-success btn-lg">장바구니에 담기</button>
+                <div class="detail-actions">
+                    <button type="submit" class="btn btn-success btn-lg">장바구니에 담기</button>
+
+                    <% if (user) { %> <button type="button" class="btn <%= isWishlisted ? 'btn-warning' : 'btn-outline-warning' %> btn-lg wishlist-btn" data-product-id="<%= product.id %>">
+                        <%= isWishlisted ? '찜 취소' : '찜하기' %>
+                    </button>
+                    <% } else { %>
+                        <button type="button" class="btn btn-outline-secondary btn-lg" disabled>찜하기 (로그인 필요)</button>
+                    <% } %>
+
+                    <a href="/products" class="btn btn-secondary btn-lg">목록으로</a>
+                </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- 푸터 -->
 <footer class="bg-dark text-white text-center py-3 mt-5">
     &copy; 2025 MyShop. All rights reserved.
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const wishlistBtn = document.querySelector('.wishlist-btn');
+
+        if (wishlistBtn) { // 찜하기 버튼이 존재할 경우에만 이벤트 리스너 추가
+            wishlistBtn.addEventListener('click', async () => {
+                const productId = wishlistBtn.dataset.productId; // data-product-id 속성에서 가져옴
+                const isCurrentlyWishlisted = wishlistBtn.textContent.trim() === '찜 취소'; // 현재 버튼 텍스트로 찜 상태 확인
+
+                const url = isCurrentlyWishlisted ? '/wishlist/remove' : '/wishlist/add'; // 요청할 URL 결정
+                const method = 'POST'; // 찜하기/찜취소 모두 POST로 처리 (DELETE도 가능하지만 POST가 더 일반적)
+
+                try {
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ productId: productId }) // 상품 ID만 서버로 전송
+                    });
+
+                    const result = await response.json(); // 서버 응답 받기 (메시지 포함)
+
+                    if (response.ok) { // HTTP 상태 코드가 200번대면 성공
+                        alert(result.message); // 성공 메시지 표시
+                        // UI 업데이트: 버튼 텍스트와 클래스 변경
+                        if (isCurrentlyWishlisted) {
+                            wishlistBtn.textContent = '찜하기';
+                            wishlistBtn.classList.remove('btn-warning');
+                            wishlistBtn.classList.add('btn-outline-warning');
+                        } else {
+                            wishlistBtn.textContent = '찜 취소';
+                            wishlistBtn.classList.remove('btn-outline-warning');
+                            wishlistBtn.classList.add('btn-warning');
+                        }
+                    } else { // HTTP 상태 코드가 200번대가 아니면 실패
+                        alert('오류: ' + (result.message || '알 수 없는 오류가 발생했습니다.')); // 서버 메시지 또는 일반 오류 메시지
+                    }
+                } catch (error) {
+                    console.error('찜하기/찜 취소 요청 실패:', error);
+                    alert('요청 중 네트워크 또는 서버 오류가 발생했습니다.');
+                }
+            });
+        }
+    });
+</script>
 </body>
 </html>
