@@ -7,7 +7,14 @@ const fs = require('fs'); // 파일 시스템 모듈 추가 (uploads 폴더 생�
 
 // 데이터베이스 경로 설정
 const dbPath = path.join(__dirname, '../db/board.db'); // 또는 database.sqlite
-const db = new sqlite3.Database(dbPath);
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('DB 연결 실패:', err.message);
+    } else {
+        console.log('DB 연결 성공');
+        db.run('PRAGMA foreign_keys = ON');
+    }
+});
 
 // 파일 업로드 설정
 const storage = multer.diskStorage({
