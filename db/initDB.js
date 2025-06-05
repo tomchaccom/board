@@ -60,7 +60,8 @@ const initializeDatabase = async () => {
                 sms_consent BOOLEAN DEFAULT 0,
                 email_consent BOOLEAN DEFAULT 0,
                 privacy_agree BOOLEAN NOT NULL DEFAULT 0,
-                isAdmin BOOLEAN DEFAULT 0
+                isAdmin BOOLEAN DEFAULT 0,
+                inquiry_content TEXT        -- 문의내용
             );
         `);
         console.log('Users table created or already exists.');

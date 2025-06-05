@@ -52,3 +52,10 @@ footer {
   padding: 1em;
   margin-top: 2em;
 }
+
+.disabled-button {
+  opacity: 0.5; /* 버튼을 반투명하게 만듭니다. */
+  pointer-events: none; /* 마우스 이벤트를 무시하여 클릭을 막습니다. */
+  cursor: not-allowed; /* 마우스 커서를 '금지' 모양으로 변경합니다. */
+  /* text-decoration: none; (선택 사항: 링크의 밑줄 제거) */
+}

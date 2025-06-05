@@ -40,21 +40,35 @@ function isAuthenticated(req, res, next) {
 }
 
 // 게시글 목록
+// 게시글 목록 (수정된 부분)
 router.get('/', isAuthenticated, (req, res) => {
     const currentUserId = req.userId; // 로그인된 사용자의 ID
+    const isAdmin = req.session.user && req.session.user.isAdmin === 1; // 세션에서 isAdmin 정보 가져오기
 
-    db.all('SELECT id, title, author, created_at, parent_id, user_id FROM posts ORDER BY created_at DESC', (err, posts) => {
+    // SQL 쿼리 수정: 답글이 원글 아래에 오도록 정렬 순서 변경
+    const sql = `
+        SELECT id, title, author, created_at, parent_id, user_id
+        FROM posts
+        ORDER BY
+            CASE WHEN parent_id IS NULL THEN id ELSE parent_id END ASC, -- 원글의 ID 또는 답글의 parent_id를 기준으로 묶음 정렬
+            parent_id IS NOT NULL ASC, -- 답글은 원글 뒤로 정렬 (원글이 먼저, 답글이 나중)
+            created_at ASC; -- 같은 묶음 내에서 생성 시간 기준으로 오름차순 (오래된 글이 먼저)
+    `;
+
+    db.all(sql, [], (err, posts) => {
         if (err) {
             console.error('게시글 불러오기 오류:', err.message);
             return res.status(500).send('게시글을 불러오는 데 실패했습니다.');
         }
-        // posts 배열에 각 게시글이 현재 사용자의 것인지 여부를 나타내는 플래그 추가
-        const postsWithAuthorStatus = posts.map(post => ({
+
+        const postsWithStatus = posts.map(post => ({
             ...post,
-            isAuthor: (post.user_id === currentUserId)
+            isAuthor: (post.user_id === currentUserId),
+            // isAnonPost: (post.author === '익명') // 이 정보는 EJS에서 직접 계산해도 됩니다.
         }));
 
-        res.render('board', { posts: postsWithAuthorStatus });
+        // EJS 템플릿으로 posts와 isAdmin 정보를 전달
+        res.render('board', { posts: postsWithStatus, user: req.session.user }); // user 객체 전체를 전달하여 isAdmin 및 기타 정보 활용
     });
 });
 
@@ -172,11 +186,10 @@ router.post('/new', isAuthenticated, upload.single('file'), (req, res) => {
         }
     );
 });
-
-// 게시글 상세 보기
+// 게시글 상세 보기 (MODIFIED)
 router.get('/view/:id', isAuthenticated, (req, res) => {
     const postId = req.params.id;
-    const currentUserId = req.userId;
+    const currentUserId = req.userId; // 로그인된 사용자의 ID
 
     db.get('SELECT * FROM posts WHERE id = ?', [postId], (err, post) => {
         if (err) {
@@ -188,19 +201,30 @@ router.get('/view/:id', isAuthenticated, (req, res) => {
         }
 
         // 해당 게시글에 연결된 파일 정보 가져오기
-        db.get('SELECT id, filename, filepath FROM files WHERE post_id = ?', [postId], (fileErr, file) => { // id도 가져옴 (삭제 시 필요)
+        db.get('SELECT id, filename, filepath FROM files WHERE post_id = ?', [postId], (fileErr, file) => {
             if (fileErr) {
                 console.error('파일 정보 불러오기 실패:', fileErr.message);
-                file = null; // 파일 정보가 없어도 게시글은 보여줌
+                file = null;
             }
 
-            // 게시글 작성자와 현재 로그인한 사용자가 동일한지 확인
-            const isAuthor = (post.user_id === currentUserId);
+            // 게시글 작성자와 현재 로그인한 사용자가 동일한지 확인하여 post 객체에 isAuthor 속성 추가
+            const postWithAuthorStatus = {
+                ...post,
+                isAuthor: (post.user_id === currentUserId) // <-- Add isAuthor directly to the post object
+            };
 
-            res.render('detail', { post: post, file: file, isAuthor: isAuthor });
+            // EJS 템플릿으로 수정된 post 객체와 user 객체를 전달
+            res.render('detail', {
+                post: postWithAuthorStatus, // <-- Use the modified post object
+                file: file,
+                user: req.session.user // <-- Pass the user object for isAdmin/isAnonPost in EJS
+            });
         });
     });
 });
+
+// ... rest of your code ...
+
 
 // 게시글 수정 페이지
 router.get('/edit/:id', isAuthenticated, (req, res) => {
