@@ -78,10 +78,10 @@
                     <% cartItems.forEach(item => { %>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <img src="<%= item.image || '/images/default_product.jpg' %>" alt="<%= item.name %>" style="width: 50px; height: 50px; object-fit: cover; margin-right: 10px;">
-                                <%= item.name %> <small>(<%= item.quantity %>개)</small>
+                                <img src="<%= item.image || '/images/default_product.jpg' %>" alt="<%= item.product_name %>" style="width: 50px; height: 50px; object-fit: cover; margin-right: 10px;">
+                                <%= item.product_name %> <small>(<%= item.quantity %>개)</small>
                             </div>
-                            <span>₩ <%= (item.price * item.quantity).toLocaleString() %></span>
+                            <span>₩ <%= (item.product_price * item.quantity).toLocaleString() %></span>
                         </li>
                     <% }); %>
                     <li class="list-group-item d-flex justify-content-between align-items-center bg-light font-weight-bold">
@@ -99,10 +99,25 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const cartItems =  JSON.stringify(cartItems) ;
-        document.getElementById('cartData').value = JSON.stringify(cartItems);
+        // Node.js 서버에서 전달받은 cartItems 데이터를 JavaScript 변수로 바로 사용
+        // 이전에 문제가 될 수 있었던 라인: const cartItems = JSON.stringify(cartItems);
+        // 올바른 EJS 변수 삽입 방식:
+        const cartItems = <%- JSON.stringify(cartItems) %>;
 
+        // 폼 제출 이벤트 리스너
         document.getElementById('orderForm').addEventListener('submit', function(event) {
+            // ⭐ TypeError 해결을 위해 cartData 값 설정 코드를 이곳으로 옮깁니다.
+            // 폼 제출 직전에 hidden input에 값을 설정하므로, 요소가 반드시 존재함을 보장합니다.
+            const cartDataInput = document.getElementById('cartData');
+            if (cartDataInput) { // 혹시 모를 경우를 대비하여 null 체크를 한번 더 해주는 것이 좋습니다.
+                cartDataInput.value = JSON.stringify(cartItems);
+            } else {
+                console.error("Error: 'cartData' hidden input not found!");
+                alert("결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. (코드 오류)");
+                event.preventDefault(); // 폼 제출 방지
+                return;
+            }
+
             const recipientName = document.getElementById('recipientName').value;
             const address = document.getElementById('address').value;
             const phone = document.getElementById('phone').value;
@@ -110,8 +125,9 @@
 
             if (!recipientName || !address || !phone || !paymentMethod) {
                 alert('모든 필수 정보를 입력해주세요.');
-                event.preventDefault();
+                event.preventDefault(); // 필수 정보 없으면 폼 제출 방지
             }
+            // 모든 유효성 검사를 통과하면 폼이 정상적으로 제출됩니다.
         });
     });
 </script>

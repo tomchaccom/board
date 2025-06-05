@@ -30,6 +30,12 @@
             color: red;
             margin-left: 4px;
         }
+        /* 추가된 섹션을 위한 스타일 (선택 사항) */
+        .mypage-section {
+            margin-top: 40px; /* 섹션 간의 여백 */
+            border-top: 1px solid #e9ecef; /* 구분선 */
+            padding-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -109,6 +115,15 @@
         <button type="submit" class="btn btn-primary w-100 mb-2">정보 수정</button>
         <a href="/" class="btn btn-secondary w-100">홈으로 돌아가기</a>
     </form>
+
+    <div class="mypage-section">
+        <h3 class="text-center mb-3">나의 활동</h3>
+        <div class="list-group">
+            <a href="/order/history" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                나의 주문 내역 조회
+            </a>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
