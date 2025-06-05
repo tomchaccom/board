@@ -33,10 +33,29 @@ function isAuthenticated(req, res, next) {
 
 // ==========================================================
 // 주문/배송지 정보 입력 페이지 (GET /order/checkout)
-// ==========================================================
+// ==========================================================제공해주신 routes/order.js 파일과 이전 대화 내용을 종합해보니, checkout.ejs에서 상품 이미지가 보이지 않는 가장 큰 이유는 routes/order.js의 db.all("SELECT * FROM cart_items WHERE user_id = ?", ...) 쿼리 때문입니다.
+//
+// SELECT * FROM cart_items는 cart_items 테이블에 있는 컬럼만 가져옵니다. 그런데 cart_items 테이블에는 product_id, product_name, product_price, quantity는 있지만, 상품 이미지 경로(image_url)는 없습니다. image_url은 products 테이블에 있습니다.
+//
+// 따라서 checkout.ejs에서 <img src="/images/<%= item.product_id %>.jpg" ...> 와 같이 product_id를 직접 사용하여 이미지 경로를 구성하고 싶다면, routes/order.js에서 db.all 쿼리를 수정할 필요가 없습니다. product_id는 이미 cart_items 테이블에 있기 때문에 SELECT *로도 충분히 가져옵니다.
+//
+// 결론적으로, 현재 routes/order.js 코드는 product_id를 포함하여 cart_items의 모든 컬럼을 잘 가져오고 있습니다.
+//
+// 그렇다면 문제는 다른 곳입니다.
+//
+// product_id에 해당하는 이미지 파일이 /public/images/ 폴더에 실제로 존재하지 않거나, 파일명이 정확히 [product_id].jpg 형식이 아닌 경우.
+// product_id 자체는 제대로 넘어가지만, 브라우저가 /images/[product_id].jpg 경로의 이미지를 찾지 못하는 경우 (예: 경로 설정 오류, 서버 정적 파일 서비스 미들웨어 설정 오류).
+// 단계별 확인 및 해결 (가장 유력한 순서대로):
+//
+// 1. routes/order.js의 console.log 출력 확인 (필수!)
+//
+// 이전 답변에서 요청드렸던 console.log를 꼭 추가하고, checkout 페이지 접속 후 서버 콘솔에 출력되는 내용을 확인해주세요.
+//
+// JavaScript
+//
+// // routes/order.js (기존 코드에서 console.log만 추가)
 router.get('/checkout', isAuthenticated, (req, res) => {
-    // ⭐ 중요: 장바구니 데이터를 세션이 아닌 DB에서 조회합니다.
-    const userId = req.userId; // 로그인된 사용자 ID 사용
+    const userId = req.userId;
 
     db.all("SELECT * FROM cart_items WHERE user_id = ?", [userId], (err, cartItems) => {
         if (err) {
@@ -44,15 +63,15 @@ router.get('/checkout', isAuthenticated, (req, res) => {
             return res.status(500).send('장바구니 정보를 불러오는 중 오류가 발생했습니다.');
         }
 
+        // ⭐⭐⭐ 이 줄을 추가하고 서버 콘솔에서 출력 내용을 확인합니다. ⭐⭐⭐
+        console.log("DEBUG: /order/checkout - cartItems from DB:", cartItems);
+
         const totalPrice = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
 
-        // 사용자 정보 (로그인된 사용자 정보 사용)
-        // 실제로는 DB에서 사용자 정보를 조회하거나, 로그인 시 세션에 더 많은 정보를 저장해야 합니다.
         const userAddress = req.session.user.address || "주소를 입력해주세요";
         const userPhone = req.session.user.phone || "연락처를 입력해주세요";
         const userName = req.username;
 
-        // 만약 cartItems가 비어있으면 장바구니로 리다이렉트
         if (cartItems.length === 0) {
             return res.redirect('/cart?message=' + encodeURIComponent('주문할 상품이 장바구니에 없습니다.'));
         }
@@ -65,10 +84,12 @@ router.get('/checkout', isAuthenticated, (req, res) => {
             userAddress: userAddress,
             userPhone: userPhone,
             userName: userName,
-            messages: [] // 메시지 배열 초기화 (오류 메시지 표시용)
+            messages: []
         });
     });
 });
+
+// ... (나머지 코드 동일) ...
 
 // ==========================================================
 // 주문 처리 (POST /order/place) - DB 저장 없이 팝업 알림 후 주문 내역 페이지로 리다이렉트
