@@ -5,9 +5,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs'); // fs 모듈은 위시리스트에서 직접 사용될 일은 없지만, 예시로 포함
 
-// 데이터베이스 경로 설정 (⭐ 이 부분을 실제 위시리스트/상품 DB 파일로 변경하세요!)
-// 예: const dbPath = path.join(__dirname, '../db/shop.db');
-const dbPath = path.join(__dirname, '../db/board.db'); // 또는 your_shop_database.sqlite 등으로 변경
+const dbPath = path.join(__dirname, '../db/board.db');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Wishlist DB 연결 실패:', err.message);
