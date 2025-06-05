@@ -77,39 +77,45 @@ router.get('/login', (req, res) => {
 });
 
 
-// 로그인 처리
+// 로그인 처리 (수정된 부분)
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
 
     db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
-        if (err) { // DB 조회 오류 처리
-            console.error('로그인 DB 조회 오류:', err.message); // 자세한 로그
-            return res.status(500).send('서버 오류가 발생했습니다.');
+        if (err) {
+            console.error('로그인 DB 조회 오류:', err.message);
+            // DB 오류 발생 시에도 login_failed.ejs로 넘어가도록 처리
+            return res.render('login_failed', { message: '로그인 처리 중 서버 오류가 발생했습니다.' });
         }
-        if (!user) { // 사용자가 존재하지 않을 경우
-            return res.status(400).send('존재하지 않는 사용자명입니다.'); // 더 구체적인 메시지
+
+        if (!user) {
+            // 사용자가 존재하지 않을 경우: login_failed.ejs로 렌더링
+            return res.render('login_failed', { message: '존재하지 않는 아이디입니다.' });
         }
 
         try {
-            const match = await bcrypt.compare(password, user.password); // 입력된 비밀번호와 DB의 해싱된 비밀번호 비교
+            const match = await bcrypt.compare(password, user.password); // 비밀번호 비교
             if (match) {
-                // 로그인 성공: 세션에 필요한 사용자 정보만 저장
+                // 로그인 성공
                 req.session.user = {
                     id: user.id,
                     username: user.username,
                     name: user.name,
-                    isAdmin: user.isAdmin === 1 // DB의 0/1을 명확히 true/false (boolean)로 변환
+                    isAdmin: user.isAdmin === 1
                 };
-                res.redirect('/'); // 로그인 후 메인 페이지로 리다이렉트
+                res.redirect('/'); // 로그인 성공 시 메인 페이지로 리다이렉트
             } else {
-                res.status(400).send('비밀번호가 일치하지 않습니다.'); // 비밀번호 불일치 메시지
+                // 비밀번호 불일치: login_failed.ejs로 렌더링
+                return res.render('login_failed', { message: '비밀번호가 일치하지 않습니다.' });
             }
         } catch (compareErr) {
-            console.error('비밀번호 비교 오류:', compareErr.message); // 해싱 비교 중 오류
-            res.status(500).send('서버 오류가 발생했습니다.');
+            console.error('비밀번호 비교 오류:', compareErr.message);
+            // 비밀번호 비교 중 오류 발생 시에도 login_failed.ejs로 넘어가도록 처리
+            return res.render('login_failed', { message: '로그인 처리 중 오류가 발생했습니다.' });
         }
     });
 });
+
 
 // 로그아웃
 router.get('/logout', (req, res) => {
